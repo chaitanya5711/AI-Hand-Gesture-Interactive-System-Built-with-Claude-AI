@@ -1,0 +1,997 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✨ Elastic Play 3.0 - Cosmic Nexus</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Space+Mono&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1442 50%, #2d1b4e 100%);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #videoElement {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scaleX(-1);
+            opacity: 0.75;
+            filter: blur(0px);
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 20px;
+            z-index: 1;
+            transition: opacity 0.4s ease, filter 0.4s ease;
+        }
+        
+        #canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 5;
+            cursor: none;
+        }
+        
+        #positionGuide {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%; max-width: 820px;
+            height: 80%; max-height: 620px;
+            border: 3px dashed rgba(0, 255, 255, 0.45);
+            border-radius: 24px;
+            pointer-events: none;
+            z-index: 10;
+            transition: opacity 0.6s ease;
+            box-shadow: 0 0 60px rgba(0, 255, 255, 0.3);
+        }
+        
+        #positionGuide::before {
+            content: '👤 Center your face';
+            position: absolute; top: -45px; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 255, 255, 0.3);
+            padding: 10px 24px;
+            border-radius: 12px;
+            font-size: 15px;
+            color: #00ffff;
+            text-shadow: 0 0 15px #00ffff;
+        }
+        
+        #positionGuide::after {
+            content: '✋ Hands in the glowing area ✋';
+            position: absolute; bottom: 25%; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 0, 255, 0.3);
+            padding: 10px 24px;
+            border-radius: 12px;
+            font-size: 15px;
+            color: #ff00ff;
+            text-shadow: 0 0 15px #ff00ff;
+        }
+        
+        .hand-indicator {
+            position: absolute;
+            width: 72px; height: 72px;
+            border: 4px solid;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: bold;
+            animation: pulse 1.8s ease-in-out infinite;
+            z-index: 50;
+            pointer-events: none;
+            box-shadow: 0 0 40px currentColor;
+            text-shadow: 0 0 20px currentColor;
+        }
+        
+        .left { border-color: #00ffff; color: #00ffff; }
+        .right { border-color: #ff00ff; color: #ff00ff; }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.22); }
+        }
+        
+        #controls {
+            position: absolute;
+            top: 20px; left: 20px;
+            background: rgba(10, 15, 40, 0.92);
+            padding: 22px;
+            border-radius: 20px;
+            backdrop-filter: blur(16px);
+            border: 2px solid rgba(255,255,255,0.15);
+            z-index: 100;
+            width: 240px;
+            box-shadow: 0 0 40px rgba(255,0,255,0.25);
+        }
+        
+        #controls h1 {
+            font-size: 27px;
+            margin-bottom: 18px;
+            background: linear-gradient(90deg, #ff00ff, #00ffff, #ff00ff);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: titleShimmer 4s linear infinite;
+        }
+        
+        @keyframes titleShimmer {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        
+        .mode-btn {
+            display: block;
+            width: 100%;
+            padding: 14px 18px;
+            margin: 8px 0;
+            background: linear-gradient(135deg, #6a0dad, #9d4edd);
+            border: none;
+            border-radius: 14px;
+            color: white;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(157, 78, 221, 0.3);
+        }
+        
+        .mode-btn:hover { transform: translateY(-3px) scale(1.03); }
+        .mode-btn.active {
+            background: linear-gradient(135deg, #ff00ff, #00ffff);
+            box-shadow: 0 0 25px #ff00ff;
+            transform: scale(1.05);
+        }
+        
+        #infoPanel {
+            position: absolute;
+            top: 20px; right: 20px;
+            background: rgba(0,0,0,0.75);
+            padding: 18px 22px;
+            border-radius: 16px;
+            backdrop-filter: blur(14px);
+            font-family: 'Space Mono', monospace;
+            font-size: 13.5px;
+            line-height: 1.65;
+            z-index: 100;
+            border: 1px solid rgba(0,255,255,0.3);
+            box-shadow: 0 0 25px rgba(0,255,255,0.2);
+        }
+        
+        #status {
+            position: absolute;
+            bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            padding: 14px 34px;
+            border-radius: 9999px;
+            backdrop-filter: blur(14px);
+            font-family: 'Space Mono', monospace;
+            font-size: 15.5px;
+            z-index: 100;
+            border: 2px solid rgba(0,255,255,0.4);
+            box-shadow: 0 0 30px rgba(0,255,255,0.3);
+            white-space: nowrap;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 200;
+        }
+        
+        .loading h2 {
+            font-size: 36px;
+            margin-bottom: 24px;
+            background: linear-gradient(90deg, #ff00ff, #00ffff, #ff00ff);
+            background-size: 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 2s linear infinite;
+        }
+        
+        @keyframes shimmer { to { background-position: 200% center; } }
+        
+        .spinner {
+            width: 62px; height: 62px;
+            border: 6px solid rgba(255,255,255,0.15);
+            border-top-color: #ff00ff;
+            border-right-color: #00ffff;
+            border-radius: 50%;
+            animation: spin 1.2s linear infinite;
+            margin: 0 auto;
+        }
+        
+        button#snapshotBtn {
+            position: absolute;
+            bottom: 20px; right: 20px;
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #ff00ff, #00ffff);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 6px 25px rgba(255,0,255,0.5);
+            transition: all 0.3s;
+        }
+        
+        button#snapshotBtn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 35px rgba(255,0,255,0.7);
+        }
+        
+        #fullscreenBtn {
+            position: absolute;
+            top: 20px;
+            right: 270px;
+            background: rgba(10,15,40,0.85);
+            color: #fff;
+            border: 2px solid rgba(0,255,255,0.4);
+            padding: 10px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 18px;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div class="loading" id="loading">
+            <h2>✨ Awakening the Cosmic Nexus...</h2>
+            <div class="spinner"></div>
+            <p style="margin-top:16px; font-size:15px; opacity:0.8;">Hand-tracking + physics + trails + burst effects</p>
+        </div>
+        
+        <video id="videoElement" autoplay playsinline></video>
+        <div id="positionGuide"></div>
+        <canvas id="canvas"></canvas>
+        
+        <div class="hand-indicator left" id="leftHandIndicator" style="display:none;">L</div>
+        <div class="hand-indicator right" id="rightHandIndicator" style="display:none;">R</div>
+        
+        <div id="controls">
+            <h1>🌌 Elastic Play 3.0</h1>
+            <button class="mode-btn active" data-mode="elastic">✨ Elastic Bands</button>
+            <button class="mode-btn" data-mode="string">🎯 String Art</button>
+            <button class="mode-btn" data-mode="particles">💫 Particle Flow</button>
+            <button class="mode-btn" data-mode="web">🕸️ Cosmic Web</button>
+            <button class="mode-btn" data-mode="vortex">🌀 Vortex Pull</button>
+            <button class="mode-btn" data-mode="lightning">⚡ Neon Lightning</button>
+            <button class="mode-btn" data-mode="bloom">🌸 Bloom Field</button>
+            <button class="mode-btn" id="videoToggle">📹 Video: Clear</button>
+            <button class="mode-btn" id="performanceToggle">⚡ Performance: High</button>
+            <button class="mode-btn" id="fullscreenBtn">⛶ Fullscreen</button>
+        </div>
+        
+        <div id="infoPanel">
+            Gesture: <span id="gesture">Waiting...</span><br>
+            Distance: <span id="distance">0</span> px<br>
+            Mode: <span id="currentMode">Elastic Bands</span><br>
+            FPS: <span id="fpsEl">60</span><br>
+            <span style="font-size:11px; opacity:0.7;">Clap = Cosmic Explosion</span>
+        </div>
+        
+        <div id="status">🎥 Starting camera + physics engine...</div>
+        <button id="snapshotBtn">📸 Capture Cosmic Moment</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    
+    <script>
+        // ============== DOM Elements ==============
+        const video = document.getElementById('videoElement');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { alpha: true });
+        const statusEl = document.getElementById('status');
+        const loading = document.getElementById('loading');
+        const leftInd = document.getElementById('leftHandIndicator');
+        const rightInd = document.getElementById('rightHandIndicator');
+        const gestureEl = document.getElementById('gesture');
+        const distanceEl = document.getElementById('distance');
+        const currentModeEl = document.getElementById('currentMode');
+        const fpsEl = document.getElementById('fpsEl');
+        const videoBtn = document.getElementById('videoToggle');
+        const performanceBtn = document.getElementById('performanceToggle');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const snapshotBtn = document.getElementById('snapshotBtn');
+
+        // ============== Core Variables ==============
+        let currentMode = 'elastic';
+        let handData = { left: null, right: null };
+        let particles = [];
+        let bgStars = [];
+        let leftTrail = [];
+        let rightTrail = [];
+        let showGuide = true;
+        let isHighPerformance = true;
+        let audioCtx;
+        let prevDist = Infinity;
+        let lastClapTime = 0;
+        let lastTime = Date.now();
+        let frameCount = 0;
+        let fps = 60;
+
+        // ============== Canvas Setup ==============
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initBgStars(); // Re-init stars on resize
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // ============== Background Stars (next-level cosmic atmosphere) ==============
+        function initBgStars() {
+            bgStars = [];
+            const count = isHighPerformance ? 220 : 120;
+            for (let i = 0; i < count; i++) {
+                bgStars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 3.2 + 0.6,
+                    speedX: (Math.random() - 0.5) * 0.8,
+                    speedY: (Math.random() - 0.5) * 0.8,
+                    hue: 200 + Math.random() * 80,
+                    twinkle: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        function drawBgStars() {
+            ctx.save();
+            for (let star of bgStars) {
+                star.twinkle += 0.12;
+                const alpha = 0.6 + Math.sin(star.twinkle) * 0.4;
+                ctx.globalAlpha = alpha;
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = `hsl(${star.hue}, 100%, 95%)`;
+                ctx.fillStyle = `hsl(${star.hue}, 100%, 95%)`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Gentle cosmic drift
+                star.x += star.speedX;
+                star.y += star.speedY;
+                if (star.x < 0) star.x = canvas.width;
+                if (star.x > canvas.width) star.x = 0;
+                if (star.y < 0) star.y = canvas.height;
+                if (star.y > canvas.height) star.y = 0;
+            }
+            ctx.restore();
+        }
+
+        // ============== Audio ==============
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playTone(freq, duration = 80, type = 'sine', volume = 0.15) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.value = volume;
+            osc.connect(gain).connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration / 1000);
+        }
+
+        // ============== Enhanced Particle Class (physics + forces) ==============
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; 
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 7;
+                this.vy = (Math.random() - 0.5) * 7;
+                this.life = 1.2;
+                this.color = color;
+                this.size = Math.random() * 5 + 2.5;
+                this.gravity = 0.08;
+            }
+            update() {
+                // NEXT-LEVEL: Hand attraction physics (inverse distance)
+                if (handData.left && handData.left[9]) {
+                    const palm = handData.left[9];
+                    const dx = palm.x - this.x;
+                    const dy = palm.y - this.y;
+                    const dist = Math.hypot(dx, dy) || 1;
+                    const force = 42 / (dist * dist + 80); // tuned attraction
+                    this.vx += dx / dist * force;
+                    this.vy += dy / dist * force;
+                }
+                if (handData.right && handData.right[9]) {
+                    const palm = handData.right[9];
+                    const dx = palm.x - this.x;
+                    const dy = palm.y - this.y;
+                    const dist = Math.hypot(dx, dy) || 1;
+                    const force = 42 / (dist * dist + 80);
+                    this.vx += dx / dist * force;
+                    this.vy += dy / dist * force;
+                }
+
+                // Gentle friction + gravity
+                this.vx *= 0.96;
+                this.vy *= 0.96;
+                this.vy += this.gravity;
+                
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= 0.028;
+                this.size *= 0.978;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.life * 0.95;
+                ctx.shadowBlur = 32;
+                ctx.shadowColor = this.color;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // ============== Gesture Recognition (extended) ==============
+        function getGesture(landmarks) {
+            const thumbTip = landmarks[4];
+            const indexTip = landmarks[8];
+            const middleTip = landmarks[12];
+            const ringTip = landmarks[16];
+            const pinkyTip = landmarks[20];
+
+            const thumbIndexDist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
+
+            if (thumbIndexDist < 0.07) return "Pinch";
+            if (indexTip.y > landmarks[5].y && 
+                middleTip.y > landmarks[9].y && 
+                ringTip.y > landmarks[13].y && 
+                pinkyTip.y > landmarks[17].y) return "Fist";
+            if (indexTip.y < landmarks[5].y && 
+                middleTip.y > landmarks[9].y && 
+                ringTip.y > landmarks[13].y) return "Point";
+            
+            // New gestures for 3.0
+            if (thumbTip.y < landmarks[5].y - 0.08 && indexTip.y > landmarks[5].y) return "Thumbs Up";
+            if (indexTip.y < landmarks[5].y && middleTip.y < landmarks[9].y && 
+                ringTip.y > landmarks[13].y && pinkyTip.y > landmarks[17].y) return "Victory";
+            
+            return "Open";
+        }
+
+        // ============== Mode Buttons ==============
+        document.querySelectorAll('.mode-btn[data-mode]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.mode-btn[data-mode]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentMode = btn.dataset.mode;
+                currentModeEl.textContent = btn.textContent.trim();
+                particles = [];
+                playTone(920, 80, 'sine', 0.25);
+            });
+        });
+
+        // ============== Video Toggle (fixed) ==============
+        let videoOpacity = 0.75;
+        videoBtn.addEventListener('click', () => {
+            if (videoOpacity === 0.75) videoOpacity = 0.35;
+            else if (videoOpacity === 0.35) videoOpacity = 0;
+            else videoOpacity = 0.75;
+            
+            video.style.opacity = videoOpacity;
+            video.style.filter = videoOpacity === 0 ? 'blur(8px)' : 'blur(0px)';
+            
+            if (videoOpacity === 0.75) videoBtn.textContent = '📹 Video: Clear';
+            else if (videoOpacity === 0.35) videoBtn.textContent = '📹 Video: Dim';
+            else videoBtn.textContent = '📹 Video: Off';
+            
+            playTone(700, 60);
+        });
+
+        // ============== Performance Toggle (fixed) ==============
+        performanceBtn.addEventListener('click', () => {
+            isHighPerformance = !isHighPerformance;
+            performanceBtn.textContent = `⚡ Performance: ${isHighPerformance ? 'High' : 'Low'}`;
+            initBgStars(); // adjust star count
+            playTone(1100, 70);
+        });
+
+        // ============== Fullscreen ==============
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        // ============== Snapshot ==============
+        snapshotBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `elastic-play-3-${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            playTone(1400, 180, 'triangle', 0.3);
+            
+            // Extra burst on snapshot
+            if (handData.left && handData.right) {
+                const midX = (handData.left[9].x + handData.right[9].x) / 2;
+                const midY = (handData.left[9].y + handData.right[9].y) / 2;
+                for (let i = 0; i < 45; i++) {
+                    const p = new Particle(midX, midY, '#ffffff');
+                    p.vx *= 4; p.vy *= 4;
+                    particles.push(p);
+                }
+            }
+        });
+
+        // ============== MediaPipe Setup ==============
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+
+        hands.setOptions({
+            maxNumHands: 2,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.75,
+            minTrackingConfidence: 0.75
+        });
+
+        hands.onResults(onResults);
+
+        const camera = new Camera(video, {
+            onFrame: async () => await hands.send({ image: video }),
+            width: 1280,
+            height: 720
+        });
+
+        camera.start().then(() => {
+            loading.style.display = 'none';
+            statusEl.textContent = '🌌 Hands detected — physics & trails active!';
+            initAudio();
+            initBgStars();
+        });
+
+        // ============== Trail System ==============
+        function updateTrails() {
+            if (handData.left) {
+                const palm = handData.left[9];
+                leftTrail.push({ x: palm.x, y: palm.y, life: 1.0 });
+                if (leftTrail.length > 28) leftTrail.shift();
+            }
+            if (handData.right) {
+                const palm = handData.right[9];
+                rightTrail.push({ x: palm.x, y: palm.y, life: 1.0 });
+                if (rightTrail.length > 28) rightTrail.shift();
+            }
+            
+            // Fade trails
+            leftTrail.forEach(t => t.life -= 0.042);
+            rightTrail.forEach(t => t.life -= 0.042);
+            
+            leftTrail = leftTrail.filter(t => t.life > 0);
+            rightTrail = rightTrail.filter(t => t.life > 0);
+        }
+
+        function drawTrails() {
+            ctx.save();
+            
+            // Left trail (cyan)
+            ctx.strokeStyle = '#00ffff';
+            ctx.lineWidth = 7;
+            ctx.shadowBlur = 28;
+            ctx.shadowColor = '#00ffff';
+            ctx.lineCap = 'round';
+            for (let i = 1; i < leftTrail.length; i++) {
+                ctx.globalAlpha = leftTrail[i].life * 0.85;
+                ctx.beginPath();
+                ctx.moveTo(leftTrail[i-1].x, leftTrail[i-1].y);
+                ctx.quadraticCurveTo(
+                    leftTrail[i-1].x, leftTrail[i-1].y,
+                    leftTrail[i].x, leftTrail[i].y
+                );
+                ctx.stroke();
+            }
+            
+            // Right trail (magenta)
+            ctx.strokeStyle = '#ff00ff';
+            ctx.shadowColor = '#ff00ff';
+            for (let i = 1; i < rightTrail.length; i++) {
+                ctx.globalAlpha = rightTrail[i].life * 0.85;
+                ctx.beginPath();
+                ctx.moveTo(rightTrail[i-1].x, rightTrail[i-1].y);
+                ctx.quadraticCurveTo(
+                    rightTrail[i-1].x, rightTrail[i-1].y,
+                    rightTrail[i].x, rightTrail[i].y
+                );
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        // ============== Clap Detection (explosion!) ==============
+        function detectClap(left, right) {
+            if (!left || !right) return;
+            const dist = Math.hypot(right[9].x - left[9].x, right[9].y - left[9].y);
+            const closingSpeed = prevDist - dist;
+            
+            if (closingSpeed > 48 && dist < 230 && Date.now() - lastClapTime > 700) {
+                const midX = (left[9].x + right[9].x) / 2;
+                const midY = (left[9].y + right[9].y) / 2;
+                
+                statusEl.textContent = '👏 CLAP! COSMIC EXPLOSION!';
+                gestureEl.textContent = 'CLAP!';
+                
+                // Massive burst
+                for (let i = 0; i < 135; i++) {
+                    const p = new Particle(midX, midY, '#ffffff');
+                    const angle = Math.random() * Math.PI * 2;
+                    const vel = 6 + Math.random() * 11;
+                    p.vx = Math.cos(angle) * vel;
+                    p.vy = Math.sin(angle) * vel;
+                    p.life = 1.4;
+                    p.size = Math.random() * 7 + 3;
+                    particles.push(p);
+                }
+                
+                playTone(180, 220, 'sawtooth', 0.45);
+                playTone(420, 160, 'sine', 0.35);
+                playTone(680, 100, 'triangle', 0.25);
+                
+                lastClapTime = Date.now();
+            }
+            prevDist = dist;
+        }
+
+        // ============== Main Results Handler ==============
+        function onResults(results) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // FPS counter
+            const now = Date.now();
+            frameCount++;
+            if (now - lastTime > 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastTime = now;
+                fpsEl.textContent = Math.round(fps);
+            }
+            
+            drawBgStars();
+            
+            handData = { left: null, right: null };
+
+            if (results.multiHandLandmarks && results.multiHandedness) {
+                if (showGuide && results.multiHandLandmarks.length > 0) {
+                    const guide = document.getElementById('positionGuide');
+                    guide.style.opacity = '0';
+                    setTimeout(() => { guide.style.display = 'none'; showGuide = false; }, 800);
+                }
+
+                results.multiHandLandmarks.forEach((landmarks, i) => {
+                    const handedness = results.multiHandedness[i].label.toLowerCase();
+                    
+                    const hand = landmarks.map(lm => ({
+                        x: canvas.width - (lm.x * canvas.width),
+                        y: lm.y * canvas.height
+                    }));
+
+                    handData[handedness] = hand;
+
+                    const palm = hand[9];
+                    const indicator = handedness === 'left' ? leftInd : rightInd;
+                    indicator.style.display = 'flex';
+                    indicator.style.left = `${palm.x - 36}px`;
+                    indicator.style.top = `${palm.y - 36}px`;
+
+                    drawHand(hand, handedness);
+                });
+
+                // Gesture display
+                if (handData.left) gestureEl.textContent = getGesture(handData.left);
+                if (handData.right) gestureEl.textContent = getGesture(handData.right) + (handData.left ? ' / ' + getGesture(handData.left) : '');
+
+                if (handData.left && handData.right) {
+                    const dist = Math.hypot(
+                        handData.right[9].x - handData.left[9].x,
+                        handData.right[9].y - handData.left[9].y
+                    );
+                    distanceEl.textContent = Math.floor(dist);
+                    
+                    detectClap(handData.left, handData.right);
+                    drawInteraction();
+                    statusEl.textContent = '🌟 Both hands — full physics active!';
+                    playTone(520 + dist / 6, 22, 'sine', 0.07);
+                } else {
+                    statusEl.textContent = '👋 One hand active • Bring the other for explosion!';
+                }
+            } else {
+                leftInd.style.display = rightInd.style.display = 'none';
+                statusEl.textContent = '🔭 Looking for your hands in the cosmos...';
+                prevDist = Infinity;
+            }
+
+            // Trails
+            updateTrails();
+            drawTrails();
+
+            // Particles with physics
+            particles = particles.filter(p => p.life > 0);
+            particles.forEach(p => { p.update(); p.draw(); });
+        }
+
+        // ============== Drawing Functions (enhanced) ==============
+        function drawHand(hand, handedness) {
+            const color = currentMode === 'elastic' ? '#ff00ff' : 
+                         currentMode === 'string' ? '#00ffff' : 
+                         currentMode === 'vortex' ? '#00ffaa' : '#ffff00';
+
+            // Connections
+            const connections = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],
+                                [0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20],[5,9],[9,13],[13,17]];
+
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 4;
+            ctx.globalAlpha = 0.65;
+            ctx.shadowBlur = 18;
+            ctx.shadowColor = color;
+
+            connections.forEach(([a,b]) => {
+                ctx.beginPath();
+                ctx.moveTo(hand[a].x, hand[a].y);
+                ctx.lineTo(hand[b].x, hand[b].y);
+                ctx.stroke();
+            });
+            ctx.restore();
+
+            // Palm + fingertips glow
+            ctx.save();
+            ctx.fillStyle = color;
+            ctx.shadowBlur = 55;
+            ctx.shadowColor = color;
+            ctx.beginPath();
+            ctx.arc(hand[9].x, hand[9].y, 16, 0, Math.PI*2);
+            ctx.fill();
+
+            [4,8,12,16,20].forEach(i => {
+                ctx.beginPath();
+                ctx.arc(hand[i].x, hand[i].y, 10, 0, Math.PI*2);
+                ctx.fill();
+            });
+            ctx.restore();
+        }
+
+        function drawInteraction() {
+            const left = handData.left ? handData.left[9] : null;
+            const right = handData.right ? handData.right[9] : null;
+            if (!left || !right) return;
+
+            switch (currentMode) {
+                case 'elastic': drawElasticBand(left, right); break;
+                case 'string': drawStringArt(); break;
+                case 'particles': drawParticleFlow(left, right); break;
+                case 'web': drawCosmicWeb(); break;
+                case 'vortex': drawVortex(left, right); break;
+                case 'lightning': drawLightning(left, right); break;
+                case 'bloom': drawBloom(left, right); break;
+            }
+        }
+
+        // Enhanced Elastic Band
+        function drawElasticBand(left, right) {
+            const dist = Math.hypot(right.x - left.x, right.y - left.y);
+            const midX = (left.x + right.x) / 2;
+            const midY = (left.y + right.y) / 2;
+            const sag = Math.min(dist * 0.32, 210);
+
+            ctx.save();
+            ctx.strokeStyle = '#ff00ff';
+            ctx.lineWidth = 13;
+            ctx.shadowBlur = 50;
+            ctx.shadowColor = '#ff00ff';
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(left.x, left.y);
+            ctx.quadraticCurveTo(midX, midY + sag, right.x, right.y);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#00ffff';
+            ctx.lineWidth = 6;
+            ctx.shadowBlur = 70;
+            ctx.stroke();
+            ctx.restore();
+
+            if (dist > 260 && Math.random() < 0.55) {
+                particles.push(new Particle(midX, midY + sag, '#ff00ff'));
+                playTone(380 + dist / 3, 45, 'sawtooth', 0.12);
+            }
+        }
+
+        function drawStringArt() {
+            const leftTips = [4,8,12,16,20].map(i => handData.left[i]);
+            const rightTips = [4,8,12,16,20].map(i => handData.right[i]);
+
+            ctx.save();
+            leftTips.forEach((l, i) => {
+                rightTips.forEach((r, j) => {
+                    const opacity = Math.max(0.25, 0.9 - Math.abs(i-j)*0.13);
+                    ctx.strokeStyle = `hsl(${i*38 + 190}, 100%, 78%)`;
+                    ctx.lineWidth = 2.4;
+                    ctx.globalAlpha = opacity;
+                    ctx.shadowBlur = 22;
+                    ctx.shadowColor = ctx.strokeStyle;
+                    ctx.beginPath();
+                    ctx.moveTo(l.x, l.y);
+                    ctx.lineTo(r.x, r.y);
+                    ctx.stroke();
+                });
+            });
+            ctx.restore();
+        }
+
+        function drawParticleFlow(left, right) {
+            const steps = isHighPerformance ? 32 : 18;
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const x = left.x + (right.x - left.x) * t;
+                const y = left.y + (right.y - left.y) * t;
+                if (Math.random() < 0.42) {
+                    particles.push(new Particle(x, y, '#ffff00'));
+                }
+            }
+        }
+
+        function drawCosmicWeb() {
+            const points = [...[4,8,12,16,20].map(i => handData.left[i]),
+                            ...[4,8,12,16,20].map(i => handData.right[i])];
+
+            ctx.save();
+            for (let i = 0; i < points.length; i++) {
+                for (let j = i+1; j < points.length; j++) {
+                    const d = Math.hypot(points[j].x - points[i].x, points[j].y - points[i].y);
+                    if (d < 340) {
+                        ctx.strokeStyle = `hsla(${d % 130 + 160}, 100%, 72%, ${1 - d/340})`;
+                        ctx.lineWidth = 1.8;
+                        ctx.globalAlpha = 0.7;
+                        ctx.shadowBlur = 14;
+                        ctx.beginPath();
+                        ctx.moveTo(points[i].x, points[i].y);
+                        ctx.lineTo(points[j].x, points[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            ctx.restore();
+        }
+
+        // NEW MODE: Vortex Pull
+        function drawVortex(left, right) {
+            const midX = (left.x + right.x) / 2;
+            const midY = (left.y + right.y) / 2;
+            const radius = Math.hypot(right.x - left.x, right.y - left.y) / 2.2;
+            const time = Date.now() / 180;
+
+            ctx.save();
+            ctx.shadowBlur = 35;
+            ctx.shadowColor = '#00ffaa';
+            for (let i = 0; i < 11; i++) {
+                const angle = time + i * 0.6;
+                ctx.strokeStyle = `hsla(160, 100%, 65%, ${0.8 - i*0.07})`;
+                ctx.lineWidth = 3.5 - i * 0.2;
+                ctx.beginPath();
+                ctx.arc(midX, midY, radius + i * 8, angle, angle + Math.PI * 1.8);
+                ctx.stroke();
+            }
+            ctx.restore();
+            
+            // Extra particles in vortex
+            if (Math.random() < 0.6) {
+                particles.push(new Particle(midX + (Math.random()-0.5)*radius*1.6, midY + (Math.random()-0.5)*radius*1.6, '#00ffaa'));
+            }
+        }
+
+        // NEW MODE: Neon Lightning
+        function drawLightning(left, right) {
+            let x1 = left.x, y1 = left.y;
+            let x2 = right.x, y2 = right.y;
+            const segments = 14;
+            const dx = (x2 - x1) / segments;
+            const dy = (y2 - y1) / segments;
+
+            ctx.save();
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = '#ffff00';
+            ctx.lineWidth = 4.5;
+            
+            // Main bolt
+            ctx.strokeStyle = '#ffff00';
+            ctx.globalAlpha = 0.95;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            let cx = x1, cy = y1;
+            for (let i = 1; i < segments; i++) {
+                cx += dx + (Math.random() - 0.5) * 28;
+                cy += dy + (Math.random() - 0.5) * 34;
+                ctx.lineTo(cx, cy);
+            }
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+
+            // Secondary bolt
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.6;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            cx = x1; cy = y1;
+            for (let i = 1; i < segments; i++) {
+                cx += dx + (Math.random() - 0.5) * 22;
+                cy += dy + (Math.random() - 0.5) * 26;
+                ctx.lineTo(cx, cy);
+            }
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            ctx.restore();
+
+            if (Math.random() < 0.4) {
+                playTone(800 + Math.random()*600, 35, 'sawtooth', 0.1);
+            }
+        }
+
+        // NEW MODE: Bloom Field
+        function drawBloom(left, right) {
+            const midX = (left.x + right.x) / 2;
+            const midY = (left.y + right.y) / 2;
+            const dist = Math.hypot(right.x - left.x, right.y - left.y) * 0.6;
+
+            ctx.save();
+            ctx.shadowBlur = 110;
+            ctx.shadowColor = '#ffcc00';
+            ctx.globalAlpha = 0.35;
+            ctx.fillStyle = '#ffcc00';
+            ctx.beginPath();
+            ctx.arc(midX, midY, dist, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Extra bloom particles
+            if (Math.random() < 0.7) {
+                const p = new Particle(midX + (Math.random() - 0.5) * dist * 1.4, midY + (Math.random() - 0.5) * dist * 1.4, '#ffcc00');
+                p.life = 1.5;
+                particles.push(p);
+            }
+        }
+
+        // Touch support
+        canvas.addEventListener('touchstart', e => e.preventDefault());
+        
+        console.log('%c🚀 Elastic Play 3.0 loaded with physics, trails, clap explosions, vortex, lightning & bloom!', 'color:#ff00ff; font-size:13px; font-weight:bold');
+    </script>
+</body>
+</html>
+```
